@@ -3,6 +3,7 @@ package setup
 import (
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 )
 
 var (
+	kubeletTemplate = mustTemplate("kubelet", "kubelet.conf")
+
 	kubeletTLSCipherSuites = []string{
 		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
 		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
@@ -35,6 +38,20 @@ var (
 	}
 )
 
+type kubeletTemplateConfig struct {
+	ContainerRuntimeEndpoint *string
+	ClientCAFile             *string
+	TLSCertFile              *string
+	TLSPrivateKeyFile        *string
+	HostnameOverride         *string
+	CloudProvider            *string
+	ClusterDNS               *string
+	ClusterDomain            *string
+	NodeIP                   *string
+	TLSCipherSuites          *[]string
+	RegisterWithTaints       *[]string
+}
+
 // KubeletControlPlane configures kubelet on a control plane node.
 func KubeletControlPlane(snap snap.Snap, hostname string, nodeIP net.IP, clusterDNS string, clusterDomain string, cloudProvider string, registerWithTaints []string, extraArgs map[string]*string) error {
 	return kubelet(snap, hostname, nodeIP, clusterDNS, clusterDomain, cloudProvider, registerWithTaints, kubeletControlPlaneLabels, extraArgs)
@@ -47,42 +64,49 @@ func KubeletWorker(snap snap.Snap, hostname string, nodeIP net.IP, clusterDNS st
 
 // kubelet configures kubelet on the local node.
 func kubelet(snap snap.Snap, hostname string, nodeIP net.IP, clusterDNS string, clusterDomain string, cloudProvider string, taints []string, labels []string, extraArgs map[string]*string) error {
-	args := map[string]string{
-		"--authorization-mode":           "Webhook",
-		"--anonymous-auth":               "false",
-		"--authentication-token-webhook": "true",
-		"--client-ca-file":               filepath.Join(snap.KubernetesPKIDir(), "client-ca.crt"),
-		"--container-runtime-endpoint":   snap.ContainerdSocketPath(),
-		"--containerd":                   snap.ContainerdSocketPath(),
-		"--cgroup-driver":                "systemd",
-		"--eviction-hard":                "'memory.available<100Mi,nodefs.available<1Gi,imagefs.available<1Gi'",
-		"--fail-swap-on":                 "false",
-		"--kubeconfig":                   filepath.Join(snap.KubernetesConfigDir(), "kubelet.conf"),
-		"--node-labels":                  strings.Join(labels, ","),
-		"--read-only-port":               "0",
-		"--register-with-taints":         strings.Join(taints, ","),
-		"--root-dir":                     snap.KubeletRootDir(),
-		"--serialize-image-pulls":        "false",
-		"--tls-cipher-suites":            strings.Join(kubeletTLSCipherSuites, ","),
-		"--tls-cert-file":                filepath.Join(snap.KubernetesPKIDir(), "kubelet.crt"),
-		"--tls-private-key-file":         filepath.Join(snap.KubernetesPKIDir(), "kubelet.key"),
+	kubeletConfigFile := filepath.Join(snap.ServiceExtraConfigDir(), "kubelet.conf")
+	kubeletFile, err := os.OpenFile(kubeletConfigFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return fmt.Errorf("failed to open auth-token-webhook.conf: %w", err)
+	}
+
+	kubeletTemplateConfig := kubeletTemplateConfig{
+		ContainerRuntimeEndpoint: utils.Pointer(snap.ContainerdSocketPath()),
+		ClientCAFile:             utils.Pointer(filepath.Join(snap.KubernetesPKIDir(), "client-ca.crt")),
+		TLSCertFile:              utils.Pointer(filepath.Join(snap.KubernetesPKIDir(), "kubelet.crt")),
+		TLSPrivateKeyFile:        utils.Pointer(filepath.Join(snap.KubernetesPKIDir(), "kubelet.key")),
+		TLSCipherSuites:          utils.Pointer(kubeletTLSCipherSuites),
+		RegisterWithTaints:       utils.Pointer(taints),
 	}
 
 	if hostname != snap.Hostname() {
-		args["--hostname-override"] = hostname
+		kubeletTemplateConfig.HostnameOverride = utils.Pointer(hostname)
 	}
 	if cloudProvider != "" {
-		args["--cloud-provider"] = cloudProvider
+		kubeletTemplateConfig.CloudProvider = utils.Pointer(cloudProvider)
 	}
 	if clusterDNS != "" {
-		args["--cluster-dns"] = clusterDNS
+		kubeletTemplateConfig.ClusterDNS = utils.Pointer(clusterDNS)
 	}
 	if clusterDomain != "" {
-		args["--cluster-domain"] = clusterDomain
+		kubeletTemplateConfig.ClusterDomain = utils.Pointer(clusterDomain)
 	}
 	if nodeIP != nil && !nodeIP.IsLoopback() {
-		args["--node-ip"] = nodeIP.String()
+		kubeletTemplateConfig.NodeIP = utils.Pointer(nodeIP.String())
 	}
+
+	if err := kubeletTemplate.Execute(kubeletFile, kubeletTemplateConfig); err != nil {
+		return fmt.Errorf("failed to write kubelet.conf: %w", err)
+	}
+	defer kubeletFile.Close()
+
+	args := map[string]string{
+		"--kubeconfig":  filepath.Join(snap.KubernetesConfigDir(), "kubelet.conf"),
+		"--node-labels": strings.Join(labels, ","),
+		"--root-dir":    snap.KubeletRootDir(),
+		"--config":      kubeletConfigFile,
+	}
+
 	if _, err := snaputil.UpdateServiceArguments(snap, "kubelet", args, nil); err != nil {
 		return fmt.Errorf("failed to render arguments file: %w", err)
 	}
