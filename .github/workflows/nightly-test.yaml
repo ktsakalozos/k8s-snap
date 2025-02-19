@@ -8,6 +8,9 @@ on:
       - .github/workflows/nightly-test.yaml
       - .github/workflows/e2e-tests.yaml
       - .github/workflows/security-scan.yaml
+  push:
+    branches:
+      - KU-2683/debug-missing-event
 
 permissions:
   contents: read
