@@ -1,0 +1,23 @@
+name: Self hosted runner info
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-info:
+    name: dbg runner info
+    runs-on: 'self-hosted-linux-amd64-noble-large'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install lxd
+        uses: ./.github/actions/install-lxd
+      - name: get runner info
+        run: |
+          uname -a
+          lsb_release -a
+          snap list
