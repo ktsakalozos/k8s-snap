@@ -27,6 +27,7 @@ Should this PR be backported? If so, to which release?
 
 If any item on the checklist is not complete, please provide justification why.
 
+<details>
 The PR title is expected to contain one of the following prefixes, following the
 [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/):
 
@@ -41,3 +42,4 @@ The PR title is expected to contain one of the following prefixes, following the
 * ci: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)
 * chore: Other changes that don't modify src or test files
 * revert: Reverts a previous commit
+</details>
