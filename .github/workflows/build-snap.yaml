@@ -4,6 +4,9 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches:
+      - v1.6.0
   workflow_call:
     inputs:
       flavor:
@@ -23,25 +26,14 @@ jobs:
     steps:
       - name: Checking out repo
         uses: actions/checkout@v4
-      - name: Apply flavor-specific patches
-        if: inputs.flavor != ''
-        run: |
-          ./build-scripts/patches/${{ inputs.flavor }}/apply
       - name: Install lxd
         uses: ./.github/actions/install-lxd
       - name: Install snapcraft
         run: |
           sudo snap install snapcraft --classic
       - name: Build k8s snap
-        id: build
-        env:
-          flavor: ${{ inputs.flavor }}
         run: |
-          if [[ -n "$flavor" ]]; then
-            out_snap=k8s-$flavor.snap
-          else
-            out_snap=k8s.snap
-          fi
+          out_snap=k8s.snap
 
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft --use-lxd
           mv k8s_*.snap $out_snap
