@@ -34,7 +34,8 @@ def check_pr_passed(pr_number) -> bool:
 def approve_and_merge_pr(pr_number) -> None:
     """Approve and merge the PR."""
     print(APPROVE_MSG.format(pr_number) + " Proceeding with merge...")
-    sh(f'gh pr review {pr_number} --approve -b "{APPROVE_MSG.format(pr_number)}"')
+    result = sh(f'gh pr review {pr_number} --approve -b "{APPROVE_MSG.format(pr_number)}"')
+    print(result)
     sh(f"gh pr merge {pr_number} --admin --squash")
 
 

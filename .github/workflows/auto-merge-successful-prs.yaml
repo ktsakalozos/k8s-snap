@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 */4 * * *"  # Every 4 hours
+  push:
+    branches:
+      - KU-3719/ci
 
 permissions:
   contents: read
