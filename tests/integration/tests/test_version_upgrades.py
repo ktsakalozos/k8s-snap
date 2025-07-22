@@ -127,7 +127,9 @@ def test_version_upgrades(
                 LOG.info("Refreshing k8s snap by path")
                 cmd = ["snap", "install", "--classic", "--dangerous", snap_path]
 
-            instance.exec(cmd)
+            out = instance.exec(cmd, capture_output=True)
+            LOG.info(out.stdout.decode())
+            LOG.info(out.stderr.decode())
             util.wait_until_k8s_ready(cp, instances)
             current_channel = channel
             LOG.info(f"Upgraded {instance.id} on channel {channel}")
