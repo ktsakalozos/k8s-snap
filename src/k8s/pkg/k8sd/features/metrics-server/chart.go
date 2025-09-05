@@ -15,8 +15,8 @@ var (
 	}
 
 	// imageRepo is the image to use for metrics-server.
-	imageRepo = "ghcr.io/canonical/metrics-server"
+	imageRepo = "carlosedp/metrics-server"
 
 	// imageTag is the image tag to use for metrics-server.
-	imageTag = "0.7.2-ck0"
+	imageTag = "v0.3.6"
 )

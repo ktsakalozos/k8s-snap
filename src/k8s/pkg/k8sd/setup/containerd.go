@@ -14,7 +14,7 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
-const defaultPauseImage = "ghcr.io/canonical/k8s-snap/pause:3.10"
+const defaultPauseImage = "carlosedp/pause:3.2-riscv64"
 
 func defaultContainerdConfig(
 	cniConfDir string,
