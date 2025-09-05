@@ -5,6 +5,38 @@
 
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/k8s)
 
+
+# RISC-V 64 instructions
+
+After uilding this branch install the snap with:
+
+```
+sudo snap install ./*.snap --dangerous --classic
+```
+
+After (or during) bootstrap disable the following features:
+
+```
+sudo k8s disable gateway
+sudo k8s disable network
+sudo k8s disable local-storage
+sudo k8s disable metrics-server
+```
+
+Install flannel:
+```
+sudo modprobe br_netfilter
+echo "--cluster-cidr=10.244.0.0/16" | sudo tee -a /var/snap/k8s/common/args/kube-controller-manager
+echo "--allocate-node-cidrs=true" | sudo tee -a /var/snap/k8s/common/args/kube-controller-manager
+sudo systemctl restart snap.k8s.kube-controller-manager
+
+git clone https://github.com/flannel-io/flannel.git
+cd flannel/chart/kube-flannel
+sudo k8s helm install flannel --values values.yaml .
+```
+
+## Canonical Kubernetes
+
 **Canonical Kubernetes** is an opinionated distribution of Kubernetes which
 includes all the tools needed to create and manage a scalable cluster with
 [LTS](https://canonical.com/blog/12-year-lts-for-kubernetes). Canonical
